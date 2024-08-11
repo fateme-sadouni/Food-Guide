@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canada Food Guide App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #c8102e;
+            --secondary-color: #f3f3f3;
+            --text-color: #333;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .app-description {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #a00d26;
+        }
+
+        .family-member {
+            display: flex;
+            gap: 10px;
+        }
+
+        .menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item {
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border-radius: var(--border-radius);
+        }
+
+        .menu-item h3 {
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .menu-item ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .menu-item li {
+            margin-bottom: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                font-size: 1.1rem;
+            }
+
+            .family-member {
+                flex-direction: column;
+            }
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+        }
+
+        .loading::after {
+            content: "";
+            width: 50px;
+            height: 50px;
+            border: 5px solid #ddd;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #downloadPDF {
+            background-color: #4CAF50;
+            margin-top: 20px;
+        }
+
+        #downloadPDF:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Canada Food Guide App</h1>
+        <p class="app-description">Get personalized daily menu recommendations based on the Canada Food Guide to improve your health and well-being.</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">Individual Daily Menu</div>
+            <div class="card-content">
+                <form id="individualForm">
+                    <label for="age">Age:</label>
+                    <input type="number" id="age" name="age" required min="2" max="150">
+
+                    <label for="gender">Gender:</label>
+                    <select id="gender" name="gender" required>
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+
+                    <button type="submit">Generate Menu</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Family Daily Menu</div>
+            <div class="card-content">
+                <form id="familyForm">
+                    <div id="familyMembers">
+                        <div class="family-member">
+                            <input type="number" name="age[]" placeholder="Age" required min="2" max="150">
+                            <select name="gender[]" required>
+                                <option value="">Select gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" id="addFamilyMember">Add Family Member</button>
+                    <button type="submit">Generate Family Menu</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Your Personalized Menu</div>
+            <div class="card-content">
+                <div id="menuResult" class="menu"></div>
+                <button id="downloadPDF" style="display: none;">Download PDF</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Recommended Servings per Day</div>
+            <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="servingsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loadingIndicator"></div>
+
+    <script>
+        // Simulated data (replace with actual data loading and processing)
+        const foodGroups = [
+            { fgid: 'vf', foodgroup: 'Vegetables and Fruit' },
+            { fgid: 'gr', foodgroup: 'Grain Products' },
+            { fgid: 'mi', foodgroup: 'Milk and Alternatives' },
+            { fgid: 'me', foodgroup: 'Meat and Alternatives' }
+        ];
+
+        const foods = [
+            { fgid: 'vf', food: 'Carrots' },
+            { fgid: 'vf', food: 'Broccoli' },
+            { fgid: 'gr', food: 'Whole Wheat Bread' },
+            { fgid: 'gr', food: 'Brown Rice' },
+            { fgid: 'mi', food: 'Milk' },
+            { fgid: 'mi', food: 'Yogurt' },
+            { fgid: 'me', food: 'Chicken Breast' },
+            { fgid: 'me', food: 'Salmon' }
+        ];
+
+        const servingsPerDay = [
+            { fgid: 'vf', gender: 'Female', ages: '19 to 30', servings: '7 to 8' },
+            { fgid: 'vf', gender: 'Male', ages: '19 to 30', servings: '8 to 10' },
+            { fgid: 'gr', gender: 'Female', ages: '19 to 30', servings: '6 to 7' },
+            { fgid: 'gr', gender: 'Male', ages: '19 to 30', servings: '8' },
+            { fgid: 'mi', gender: 'Female', ages: '19 to 30', servings: '2' },
+            { fgid: 'mi', gender: 'Male', ages: '19 to 30', servings: '2' },
+            { fgid: 'me', gender: 'Female', ages: '19 to 30', servings: '2' },
+            { fgid: 'me', gender: 'Male', ages: '19 to 30', servings: '3' }
+        ];
+
+        function generateMenu(age, gender) {
+            const menu = foodGroups.map(fg => {
+                const serving = servingsPerDay.find(s => s.fgid === fg.fgid && s.gender === gender);
+                const foodItems = foods
+                    .filter(f => f.fgid === fg.fgid)
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, parseInt(serving?.servings.split(' to ')[0]) || 0);
+                
+                return {
+                    group: fg.foodgroup,
+                    foods: foodItems.map(f => f.food),
+                    servings: serving?.servings
+                };
+            });
+
+            return menu;
+        }
+
+        function displayMenu(menu, container) {
+            container.innerHTML = '';
+            menu.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'menu-item';
+                menuItem.innerHTML = `
+                    <h3>${item.group} (${item.servings} servings)</h3>
+                    <ul>
+                        ${item.foods.map(food => `<li>${food}</li>`).join('')}
+                    </ul>
+                `;
+                container.appendChild(menuItem);
+            });
+        }
+
+        document.getElementById('individualForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const age = document.getElementById('age').value;
+            const gender = document.getElementById('gender').value;
+            const menu = generateMenu(age, gender);
+            displayMenu(menu, document.getElementById('menuResult'));
+            document.getElementById('downloadPDF').style.display = 'block';
+        });
+
+        document.getElementById('familyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const ages = Array.from(this.querySelectorAll('input[name="age[]"]')).map(input => input.value);
+            const genders = Array.from(this.querySelectorAll('select[name="gender[]"]')).map(select => select.value);
+            const familyMenu = ages.map((age, index) => generateMenu(age, genders[index]));
+            
+            const menuResult = document.getElementById('menuResult');
+            menuResult.innerHTML = '';
+            familyMenu.forEach((menu, index) => {
+                const memberMenu = document.createElement('div');
+                memberMenu.innerHTML = `<h2>Family Member ${index + 1}</h2>`;
+                displayMenu(menu, memberMenu);
+                menuResult.appendChild(memberMenu);
+            });
+            document.getElementById('downloadPDF').style.display = 'block';
+        });
+
+        document.getElementById('addFamilyMember').addEventListener('click', function() {
+            const familyMembers = document.getElementById('familyMembers');
+            const newMember = document.createElement('div');
+            newMember.className = 'family-member';
+            newMember.innerHTML = `
+                <input type="number" name="age[]" placeholder="Age" required min="2" max="150">
+                <select name="gender[]" required>
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+            `;
+            familyMembers.appendChild(newMember);
+        });
+
+        // Chart.js
+	const ctx = document.getElementById('servingsChart').getContext('2d');
+	    new Chart(ctx, {
+		type: 'bar',
+		data: {
+		    labels: foodGroups.map(fg => fg.foodgroup),
+		    datasets: [{
+		        label: 'Recommended Servings (Female)',
+		        data: servingsPerDay.filter(s => s.gender === 'Female').map(s => parseInt(s.servings.split(' to ')[0])),
+		        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+		        borderColor: 'rgb(255, 99, 132)',
+		        borderWidth: 1
+		    }, {
+		        label: 'Recommended Servings (Male)',
+		        data: servingsPerDay.filter(s => s.gender === 'Male').map(s => parseInt(s.servings.split(' to ')[0])),
+		        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+		        borderColor: 'rgb(54, 162, 235)',
+		        borderWidth: 1
+		    }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Servings'
+                    }
+                }
+            }
+        }
+    });
+
+    // PDF Download functionality
+    document.getElementById('downloadPDF').addEventListener('click', function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(22);
+        doc.text("Your Personalized Menu", 105, 15, null, null, "center");
+        
+        doc.setFontSize(12);
+        let yPos = 30;
+        
+        const menuItems = document.querySelectorAll('#menuResult .menu-item');
+        menuItems.forEach((item, index) => {
+            const title = item.querySelector('h3').textContent;
+            const foods = Array.from(item.querySelectorAll('li')).map(li => li.textContent);
+            
+            doc.setFontSize(14);
+            doc.text(title, 20, yPos);
+            yPos += 10;
+            
+            doc.setFontSize(12);
+            foods.forEach(food => {
+                doc.text(`• ${food}`, 30, yPos);
+                yPos += 7;
+            });
+            
+            yPos += 10;
+            
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+        });
+        
+        doc.save("personalized_menu.pdf");
+    });
+
+    // Loading indicator
+    function showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'flex';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    // Simulate loading time for menu generation
+    document.getElementById('individualForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        showLoading();
+        setTimeout(() => {
+            const age = document.getElementById('age').value;
+            const gender = document.getElementById('gender').value;
+            const menu = generateMenu(age, gender);
+            displayMenu(menu, document.getElementById('menuResult'));
+            document.getElementById('downloadPDF').style.display = 'block';
+            hideLoading();
+        }, 1000);
+    });
+
+    document.getElementById('familyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        showLoading();
+        setTimeout(() => {
+            const ages = Array.from(this.querySelectorAll('input[name="age[]"]')).map(input => input.value);
+            const genders = Array.from(this.querySelectorAll('select[name="gender[]"]')).map(select => select.value);
+            const familyMenu = ages.map((age, index) => generateMenu(age, genders[index]));
+            
+            const menuResult = document.getElementById('menuResult');
+            menuResult.innerHTML = '';
+            familyMenu.forEach((menu, index) => {
+                const memberMenu = document.createElement('div');
+                memberMenu.innerHTML = `<h2>Family Member ${index + 1}</h2>`;
+                displayMenu(menu, memberMenu);
+                menuResult.appendChild(memberMenu);
+            });
+            document.getElementById('downloadPDF').style.display = 'block';
+            hideLoading();
+        }, 1500);
+    });
+</script>
+</body>
+</html>
